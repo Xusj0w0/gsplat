@@ -535,11 +535,10 @@ rasterize_to_pixels_bwd_pgsr_tensor(
 
     GSPLAT_CHECK_INPUT(colors);
     uint32_t COLOR_DIM = colors.size(-1);
-    uint32_t pgsr_dim = all_maps.size(-1);
 
 #define __GS__CALL_(N)                                                         \
     case N:                                                                    \
-        return call_kernel_with_dim<N, pgsr_dim>(                              \
+        return call_kernel_with_dim<N, PGSR_MAP_DIM>(                          \
             instrinsics,                                                       \
             means2d,                                                           \
             conics,                                                            \
