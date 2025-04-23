@@ -22,8 +22,6 @@ __global__ void rasterize_to_pixels_fwd_pgsr_kernel(
     const uint32_t n_isects,
     const bool packed,
     const vec4<S> *__restrict__ instrinsics, // [C, 4], pgsr camera instrinsics, fx, fy, cx, cy
-    // const S *__restrict__ viewmatrix, // [C, 4, 4]
-    // const S *__restrict__ cam_pos, // [C, 3]
     const vec2<S> *__restrict__ means2d, // [C, N, 2] or [nnz, 2]
     const vec3<S> *__restrict__ conics,  // [C, N, 3] or [nnz, 3]
     const S *__restrict__ colors,      // [C, N, COLOR_DIM] or [nnz, COLOR_DIM]
@@ -42,7 +40,7 @@ __global__ void rasterize_to_pixels_fwd_pgsr_kernel(
     S *__restrict__ render_alphas, // [C, image_height, image_width, 1]
     S *__restrict__ out_all_maps, // [C, image_height, image_width, PGSR_MAP_DIM], pgsr output maps
     S *__restrict__ out_plane_depths, // [C, image_height, image_width, 1], pgsr plane_depths
-    uint32_t *__restrict__ out_observe, // [C, N], pgsr observe
+    int32_t *__restrict__ out_observe, // [C, N], pgsr observe
     int32_t *__restrict__ last_ids, // [C, image_height, image_width]
     bool *__restrict__ has_hit_any_pixels, // [C, N]
     const bool render_geo // whether render pgsr geometries like normals and plane depths
@@ -60,7 +58,7 @@ __global__ void rasterize_to_pixels_fwd_pgsr_kernel(
     tile_offsets += camera_id * tile_height * tile_width;
     render_colors += camera_id * image_height * image_width * COLOR_DIM;
     render_alphas += camera_id * image_height * image_width;
-    out_all_maps += camera_id * image_height * image_width * PGSR_MAP_DIM;
+    out_all_maps += camera_id * image_height * image_width * PGSR_DIM;
     out_plane_depths += camera_id * image_height * image_width;
     last_ids += camera_id * image_height * image_width;
     if (backgrounds != nullptr) {
@@ -246,9 +244,11 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
     bool render_geo // whether render pgsr geometries like normals and plane depths
 ) {
     GSPLAT_DEVICE_GUARD(means2d);
+    GSPLAT_CHECK_INPUT(instrinsics);
     GSPLAT_CHECK_INPUT(means2d);
     GSPLAT_CHECK_INPUT(conics);
     GSPLAT_CHECK_INPUT(colors);
+    GSPLAT_CHECK_INPUT(all_maps);
     GSPLAT_CHECK_INPUT(opacities);
     GSPLAT_CHECK_INPUT(tile_offsets);
     GSPLAT_CHECK_INPUT(flatten_ids);
@@ -263,6 +263,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
     uint32_t C = tile_offsets.size(0);         // number of cameras
     uint32_t N = packed ? 0 : means2d.size(1); // number of gaussians
     uint32_t channels = colors.size(-1);
+    uint32_t pgsr_dim = all_maps.size(-1);
     uint32_t tile_height = tile_offsets.size(1);
     uint32_t tile_width = tile_offsets.size(2);
     uint32_t n_isects = flatten_ids.size(0);
@@ -281,7 +282,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
         means2d.options().dtype(torch::kFloat32)
     );
     torch::Tensor out_all_maps = torch::empty(
-        {C, image_height, image_width, PGSR_MAP_DIM},
+        {C, image_height, image_width, pgsr_dim},
         means2d.options().dtype(torch::kFloat32)
     );
     torch::Tensor out_plane_depths = torch::empty(
@@ -289,7 +290,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
         means2d.options().dtype(torch::kFloat32)
     );
     torch::Tensor out_observe = torch::empty(
-        {C, n_isects}, means2d.options().dtype(torch::kInt32)
+        {C, N}, means2d.options().dtype(torch::kInt32)
     );
     torch::Tensor last_ids = torch::empty(
         {C, image_height, image_width}, means2d.options().dtype(torch::kInt32)
