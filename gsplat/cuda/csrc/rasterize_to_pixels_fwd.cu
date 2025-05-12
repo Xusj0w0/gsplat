@@ -34,7 +34,7 @@ __global__ void rasterize_to_pixels_fwd_kernel(
     S *__restrict__ render_colors, // [C, image_height, image_width, COLOR_DIM]
     S *__restrict__ render_alphas, // [C, image_height, image_width, 1]
     int32_t *__restrict__ last_ids, // [C, image_height, image_width]
-    bool *__restrict__ has_hit_any_pixels // [C, N]
+    bool *__restrict__ has_hit_any_pixels // [C, N] or [nnz]
 ) {
     // each thread draws one pixel, but also timeshares caching gaussians in a
     // shared tile
@@ -242,9 +242,15 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor> call_kern
     torch::Tensor last_ids = torch::empty(
         {C, image_height, image_width}, means2d.options().dtype(torch::kInt32)
     );
+    // allocate tensor for has_hit_any_pixels
+    uint32_t nnz = packed ? means2d.size(0) : 0;
     torch::Tensor has_hit_any_pixels = torch::zeros(
-        {C, N}, means2d.options().dtype(torch::kBool)
+        packed ? std::vector<int64_t>{nnz} : std::vector<int64_t>{C, N},
+        means2d.options().dtype(torch::kBool)
     );
+    // torch::Tensor has_hit_any_pixels = torch::zeros(
+    //     {C, N}, means2d.options().dtype(torch::kBool)
+    // );
 
     at::cuda::CUDAStream stream = at::cuda::getCurrentCUDAStream();
     const uint32_t shared_mem =

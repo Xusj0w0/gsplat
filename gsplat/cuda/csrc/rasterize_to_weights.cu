@@ -193,14 +193,32 @@ call_kernel(
     dim3 threads = {tile_size, tile_size, 1};
     dim3 blocks = {C, tile_height, tile_width};
 
-    torch::Tensor accum_weights =
-        torch::zeros({C, N}, means2d.options().dtype(torch::kFloat32));
-    torch::Tensor reverse_count =
-        torch::zeros({C, N}, means2d.options().dtype(torch::kInt32));
-    torch::Tensor blend_weights =
-        torch::zeros({C, N}, means2d.options().dtype(torch::kFloat32));
-    torch::Tensor dist_accum =
-        torch::zeros({C, N}, means2d.options().dtype(torch::kFloat32));
+    // allocate output tensors
+    uint32_t nnz = packed ? means2d.size(0) : 0;
+    torch::Tensor accum_weights = torch::zeros(
+        packed ? std::vector<int64_t>{nnz} : std::vector<int64_t>{C, N},
+        means2d.options().dtype(torch::kFloat32)
+    );
+    torch::Tensor reverse_count = torch::zeros(
+        packed ? std::vector<int64_t>{nnz} : std::vector<int64_t>{C, N},
+        means2d.options().dtype(torch::kInt32)
+    );
+    torch::Tensor blend_weights = torch::zeros(
+        packed ? std::vector<int64_t>{nnz} : std::vector<int64_t>{C, N},
+        means2d.options().dtype(torch::kFloat32)
+    );
+    torch::Tensor dist_accum = torch::zeros(
+        packed ? std::vector<int64_t>{nnz} : std::vector<int64_t>{C, N},
+        means2d.options().dtype(torch::kFloat32)
+    );
+    // torch::Tensor accum_weights =
+    //     torch::zeros({C, N}, means2d.options().dtype(torch::kFloat32));
+    // torch::Tensor reverse_count =
+    //     torch::zeros({C, N}, means2d.options().dtype(torch::kInt32));
+    // torch::Tensor blend_weights =
+    //     torch::zeros({C, N}, means2d.options().dtype(torch::kFloat32));
+    // torch::Tensor dist_accum =
+    //     torch::zeros({C, N}, means2d.options().dtype(torch::kFloat32));
 
     at::cuda::CUDAStream stream = at::cuda::getCurrentCUDAStream();
     const uint32_t shared_mem =
