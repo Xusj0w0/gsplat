@@ -98,4 +98,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
     m.def("rasterize_to_visibilities", &gsplat::rasterize_to_visibilities_tensor);
     m.def("rasterize_to_weights", &gsplat::rasterize_to_weights_tensor);
+    m.def("rasterize_to_weighted_alphas", &gsplat::rasterize_to_weighted_alphas_tensor);
 }
