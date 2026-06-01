@@ -1,0 +1,28 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "wsl-ninja-debug-cuda",
+            "displayName": "WSL (Ubuntu2204) Ninja Debug CUDA",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "ENABLE_FEATURE": "ON",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_STANDARD": "17",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_CUDA_ARCHITECTURES": "89",
+                "Torch_DIR": "/home/xusj/Applications/libtorch/share/cmake/Torch",
+                "CMAKE_PREFIX_PATH": "/home/xusj/Applications/libtorch",
+                "ENABLE_CUDA_DEBUG": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build-debug",
+            "configurePreset": "wsl-ninja-debug-cuda",
+            "jobs": 16
+        }
+    ]
+}
