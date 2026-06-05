@@ -26,7 +26,6 @@
 #include <cooperative_groups.h>
 
 #include "Common.h"
-#include "MacroUtils.h"
 #include "Rasterization.h"
 
 namespace gsplat {
@@ -186,14 +185,13 @@ __global__ void rasterize_to_pixels_radegs_fwd_kernel(
             const float sigma = 0.5f * (conic.x * delta.x * delta.x +
                                         conic.z * delta.y * delta.y) +
                                 conic.y * delta.x * delta.y;
-            float alpha = min(MAX_ALPHA, opac * __expf(-sigma));
+            float alpha = min(0.999f, opac * __expf(-sigma));
             if (sigma < 0.f || alpha < ALPHA_THRESHOLD) {
                 continue;
             }
 
             const float next_T = T * (1.0f - alpha);
-            if (next_T <=
-                TRANSMITTANCE_THRESHOLD) { // this pixel is done: exclusive
+            if (next_T <= 1e-4f) { // this pixel is done: exclusive
                 done = true;
                 break;
             }
@@ -365,7 +363,25 @@ void launch_rasterize_to_pixels_radegs_fwd_kernel(
         at::Tensor last_ids                                                    \
     );
 
-GSPLAT_FOR_EACH(__INS__, GSPLAT_NUM_CHANNELS)
+__INS__(1)
+__INS__(2)
+__INS__(3)
+__INS__(4)
+__INS__(5)
+__INS__(8)
+__INS__(9)
+__INS__(16)
+__INS__(17)
+__INS__(32)
+__INS__(33)
+__INS__(64)
+__INS__(65)
+__INS__(128)
+__INS__(129)
+__INS__(256)
+__INS__(257)
+__INS__(512)
+__INS__(513)
 #undef __INS__
 
 } // namespace gsplat

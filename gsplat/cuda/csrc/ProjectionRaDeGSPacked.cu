@@ -211,7 +211,7 @@ __global__ void projection_radegs_packed_fwd_kernel(
     // check if the points are in the image region
     float radius_x, radius_y;
     if (valid) {
-        float extend = GAUSSIAN_EXTEND;
+        float extend = 3.33f;
         if (opacities != nullptr) {
             float opacity = opacities[bid * N + gid];
             if (compensations != nullptr) {
@@ -224,7 +224,7 @@ __global__ void projection_radegs_packed_fwd_kernel(
             // Compute opacity-aware bounding box.
             // https://arxiv.org/pdf/2402.00525 Section B.2
             extend =
-                min(GAUSSIAN_EXTEND,
+                min(3.33f,
                     sqrt(2.0f * __logf(opacity / ALPHA_THRESHOLD)));
         }
 

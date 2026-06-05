@@ -312,8 +312,6 @@ std::tuple<at::Tensor, at::Tensor> rasterize_to_indices_3dgs(
     return std::make_tuple(gaussian_ids, pixel_ids);
 }
 
-#endif
-
 #if GSPLAT_BUILD_RADEGS
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
@@ -406,7 +404,25 @@ rasterize_to_pixels_radegs_fwd(
     // channels into the kernel functions and avoid necessary global memory
     // writes. This requires moving the channel padding from python to C side.
     switch (channels) {
-        GSPLAT_FOR_EACH(__LAUNCH_KERNEL__, GSPLAT_NUM_CHANNELS)
+        __LAUNCH_KERNEL__(1)
+        __LAUNCH_KERNEL__(2)
+        __LAUNCH_KERNEL__(3)
+        __LAUNCH_KERNEL__(4)
+        __LAUNCH_KERNEL__(5)
+        __LAUNCH_KERNEL__(8)
+        __LAUNCH_KERNEL__(9)
+        __LAUNCH_KERNEL__(16)
+        __LAUNCH_KERNEL__(17)
+        __LAUNCH_KERNEL__(32)
+        __LAUNCH_KERNEL__(33)
+        __LAUNCH_KERNEL__(64)
+        __LAUNCH_KERNEL__(65)
+        __LAUNCH_KERNEL__(128)
+        __LAUNCH_KERNEL__(129)
+        __LAUNCH_KERNEL__(256)
+        __LAUNCH_KERNEL__(257)
+        __LAUNCH_KERNEL__(512)
+        __LAUNCH_KERNEL__(513)
     default:
         AT_ERROR("Unsupported number of channels: ", channels);
     }
@@ -523,7 +539,25 @@ rasterize_to_pixels_radegs_bwd(
     // channels into the kernel functions and avoid necessary global memory
     // writes. This requires moving the channel padding from python to C side.
     switch (channels) {
-        GSPLAT_FOR_EACH(__LAUNCH_KERNEL__, GSPLAT_NUM_CHANNELS)
+        __LAUNCH_KERNEL__(1)
+        __LAUNCH_KERNEL__(2)
+        __LAUNCH_KERNEL__(3)
+        __LAUNCH_KERNEL__(4)
+        __LAUNCH_KERNEL__(5)
+        __LAUNCH_KERNEL__(8)
+        __LAUNCH_KERNEL__(9)
+        __LAUNCH_KERNEL__(16)
+        __LAUNCH_KERNEL__(17)
+        __LAUNCH_KERNEL__(32)
+        __LAUNCH_KERNEL__(33)
+        __LAUNCH_KERNEL__(64)
+        __LAUNCH_KERNEL__(65)
+        __LAUNCH_KERNEL__(128)
+        __LAUNCH_KERNEL__(129)
+        __LAUNCH_KERNEL__(256)
+        __LAUNCH_KERNEL__(257)
+        __LAUNCH_KERNEL__(512)
+        __LAUNCH_KERNEL__(513)
     default:
         AT_ERROR("Unsupported number of channels: ", channels);
     }
@@ -1182,5 +1216,7 @@ rasterize_to_pixels_from_world_3dgs_bwd(
         v_means, v_quats, v_scales, v_colors, v_opacities
     );
 }
+
+#endif
 
 } // namespace gsplat

@@ -11,16 +11,6 @@
 #include "Ops.h"
 #include "utils/utils.h"
 
-namespace gsplat {
-
-void launch_intersect_tile_lidar_kernel(const c10::intrusive_ptr<RowOffsetStructuredSpinningLidarModelParametersExt> &, const at::Tensor, const at::Tensor, const at::Tensor, const at::optional<at::Tensor>, const at::optional<at::Tensor>, const uint32_t, const at::optional<at::Tensor>, at::optional<at::Tensor>, at::optional<at::Tensor>, at::optional<at::Tensor>) {
-    TORCH_CHECK(
-        false, "Lidar tile intersection is not linked in gsplat_debug_runner"
-    );
-}
-
-} // namespace gsplat
-
 namespace {
 
 torch::Tensor cudaFloatContiguous(torch::Tensor t) {
@@ -210,32 +200,37 @@ int main(int argc, char **argv) {
 
         std::cout << "Running projection for " << n_gaussians << " gaussians"
                   << std::endl;
-        auto [radii, means2d, depths, conics, compensations, ray_planes, normals] =
-            gsplat::projection_radegs_fused_fwd(
-                means,
-                covars,
-                quats,
-                scales,
-                opacities,
-                viewmats,
-                Ks,
-                s.image_width,
-                s.image_height,
-                eps2d,
-                near_plane,
-                far_plane,
-                radius_clip,
-                calc_compensations,
-                camera_model_pinhole
-            );
+        auto
+            [radii,
+             means2d,
+             depths,
+             conics,
+             compensations,
+             ray_planes,
+             normals] =
+                gsplat::projection_radegs_fused_fwd(
+                    means,
+                    covars,
+                    quats,
+                    scales,
+                    opacities,
+                    viewmats,
+                    Ks,
+                    s.image_width,
+                    s.image_height,
+                    eps2d,
+                    near_plane,
+                    far_plane,
+                    radius_clip,
+                    calc_compensations,
+                    camera_model_pinhole
+                );
 
         std::cout << "Computing tile intersections" << std::endl;
         auto [tiles_per_gauss, isect_ids, flatten_ids] = gsplat::intersect_tile(
             means2d,
             radii,
             depths,
-            conics,
-            opacities.unsqueeze(0),
             c10::nullopt,
             c10::nullopt,
             n_images,

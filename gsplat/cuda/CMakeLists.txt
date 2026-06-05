@@ -29,12 +29,8 @@ separate_arguments(TORCH_CXX_FLAGS_LIST UNIX_COMMAND "${TORCH_CXX_FLAGS}")
 set(GSPLAT_SOURCES
     csrc/Adam.cpp
     csrc/AdamCUDA.cu
-    csrc/GaussianLosses.cpp
-    csrc/GaussianLossesCUDA.cu
     csrc/Intersect.cpp
     csrc/IntersectTile.cu
-    csrc/MCMCPerturb.cpp
-    csrc/MCMCPerturbCUDA.cu
     csrc/Null.cpp
     csrc/NullCUDA.cu
     csrc/Projection.cpp

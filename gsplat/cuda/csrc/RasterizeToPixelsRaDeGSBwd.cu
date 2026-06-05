@@ -27,7 +27,6 @@
 #include <cooperative_groups.h>
 
 #include "Common.h"
-#include "MacroUtils.h"
 #include "Rasterization.h"
 #include "Utils.cuh"
 
@@ -228,7 +227,7 @@ __global__ void rasterize_to_pixels_radegs_bwd_kernel(
                                       conic.z * delta.y * delta.y) +
                               conic.y * delta.x * delta.y;
                 vis = __expf(-sigma);
-                alpha = min(MAX_ALPHA, opac * vis);
+                alpha = min(0.999f, opac * vis);
                 if (sigma < 0.f || alpha < ALPHA_THRESHOLD) {
                     valid = false;
                 }
@@ -248,7 +247,7 @@ __global__ void rasterize_to_pixels_radegs_bwd_kernel(
             // initialize everything to 0, only set if the lane is valid
             if (valid) {
                 // compute the current T for this gaussian
-                float ra = 1.0f / fmaxf(MIN_ONE_MINUS_ALPHA, 1.0f - alpha);
+                float ra = 1.0f / (1.0f - alpha);
                 T *= ra;
                 const float fac = alpha * T;
                 float v_alpha = 0.f;
@@ -307,7 +306,7 @@ __global__ void rasterize_to_pixels_radegs_bwd_kernel(
                 // update t_opt buffer
                 t_buffer += t_opt * fac;
 
-                if (opac * vis <= MAX_ALPHA) {
+                if (opac * vis <= 0.999f) {
                     const float v_sigma = -opac * vis * v_alpha;
                     v_conic_local = {
                         0.5f * v_sigma * delta.x * delta.x,
@@ -519,7 +518,25 @@ void launch_rasterize_to_pixels_radegs_bwd_kernel(
         at::Tensor v_normals                                                   \
     );
 
-GSPLAT_FOR_EACH(__INS__, GSPLAT_NUM_CHANNELS)
+__INS__(1)
+__INS__(2)
+__INS__(3)
+__INS__(4)
+__INS__(5)
+__INS__(8)
+__INS__(9)
+__INS__(16)
+__INS__(17)
+__INS__(32)
+__INS__(33)
+__INS__(64)
+__INS__(65)
+__INS__(128)
+__INS__(129)
+__INS__(256)
+__INS__(257)
+__INS__(512)
+__INS__(513)
 #undef __INS__
 
 } // namespace gsplat

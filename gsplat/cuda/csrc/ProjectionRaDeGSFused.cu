@@ -191,7 +191,7 @@ __global__ void projection_radegs_fused_fwd_kernel(
     // compute the inverse of the 2d covariance
     mat2 covar2d_inv = glm::inverse(covar2d);
 
-    float extend = GAUSSIAN_EXTEND;
+    float extend = 3.33f;
     if (opacities != nullptr) {
         float opacity = opacities[bid * N + gid];
         if (compensations != nullptr) {
@@ -206,7 +206,7 @@ __global__ void projection_radegs_fused_fwd_kernel(
         // Compute opacity-aware bounding box.
         // https://arxiv.org/pdf/2402.00525 Section B.2
         extend =
-            min(GAUSSIAN_EXTEND,
+            min(3.33f,
                 sqrt(2.0f * __logf(opacity / ALPHA_THRESHOLD)));
     }
 

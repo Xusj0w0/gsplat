@@ -546,7 +546,6 @@ projection_ewa_3dgs_packed_bwd(
     return std::make_tuple(v_means, v_covars, v_quats, v_scales, v_viewmats);
 }
 
-#endif
 
 #if GSPLAT_BUILD_RADEGS
 
@@ -1516,5 +1515,7 @@ projection_ut_3dgs_fused(
     );
     return std::make_tuple(radii, means2d, depths, conics, compensations);
 }
+
+#endif
 
 } // namespace gsplat
