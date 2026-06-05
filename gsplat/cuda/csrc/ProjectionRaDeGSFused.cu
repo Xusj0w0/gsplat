@@ -681,5 +681,3 @@ void launch_projection_radegs_fused_bwd_kernel(
 }
 
 } // namespace gsplat
-
-#endif

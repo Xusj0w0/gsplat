@@ -537,5 +537,3 @@ __INS__(513)
 #undef __INS__
 
 } // namespace gsplat
-
-#endif

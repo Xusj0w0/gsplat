@@ -13,14 +13,6 @@ set(GSPLAT_CUDA_ARCHITECTURES "70;75;86" CACHE STRING "CUDA architectures")
 set(GSPLAT_NUM_CHANNELS "" CACHE STRING "Optional GSPLAT_NUM_CHANNELS override, for example: 1,2,3,4")
 set(TORCH_CUDA_ARCH_LIST "7.0;7.5;8.6" CACHE STRING "CUDA architectures passed to TorchConfig")
 
-set(GSPLAT_BUILD_2DGS "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_3DGS "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_RADEGS "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_3DGUT "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_ADAM "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_RELOC "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_LOSSES "0" CACHE STRING "Optional override: 0 or 1")
-
 find_package(Torch REQUIRED)
 find_package(OpenMP)
 
@@ -124,12 +116,6 @@ if(OpenMP_CXX_FOUND)
 else()
     message(STATUS "Compiling without OpenMP...")
 endif()
-
-foreach(_feature IN ITEMS 2DGS 3DGS RADEGS 3DGUT ADAM RELOC LOSSES)
-    if(NOT "${GSPLAT_BUILD_${_feature}}" STREQUAL "")
-        target_compile_definitions(${RAST_NAME} PUBLIC "GSPLAT_BUILD_${_feature}=${GSPLAT_BUILD_${_feature}}")
-    endif()
-endforeach()
 
 if(GSPLAT_BUILD_CAMERA_WRAPPERS)
     target_compile_definitions(${RAST_NAME} PUBLIC GSPLAT_BUILD_CAMERA_WRAPPERS=1)
