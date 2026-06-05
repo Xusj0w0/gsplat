@@ -290,6 +290,172 @@ std::tuple<at::Tensor, at::Tensor> relocation(
     const int n_max
 );
 
+// Projection for RaDeGS
+std::tuple<
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor>
+projection_radegs_fused_fwd(
+    const at::Tensor &means,                   // [..., N, 3]
+    const at::optional<at::Tensor> &covars,    // [..., N, 6] optional
+    const at::optional<at::Tensor> &quats,     // [..., N, 4] optional
+    const at::optional<at::Tensor> &scales,    // [..., N, 3] optional
+    const at::optional<at::Tensor> &opacities, // [..., N] optional
+    const at::Tensor &viewmats,                // [..., C, 4, 4]
+    const at::Tensor &Ks,                      // [..., C, 3, 3]
+    int64_t image_width,
+    int64_t image_height,
+    double eps2d,
+    double near_plane,
+    double far_plane,
+    double radius_clip,
+    bool calc_compensations,
+    int64_t camera_model
+);
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+projection_radegs_fused_bwd(
+    // fwd inputs
+    const at::Tensor &means,                // [..., N, 3]
+    const at::optional<at::Tensor> &covars, // [..., N, 6] optional
+    const at::optional<at::Tensor> &quats,  // [..., N, 4] optional
+    const at::optional<at::Tensor> &scales, // [..., N, 3] optional
+    const at::Tensor &viewmats,             // [..., C, 4, 4]
+    const at::Tensor &Ks,                   // [..., C, 3, 3]
+    int64_t image_width,
+    int64_t image_height,
+    double eps2d,
+    int64_t camera_model,
+    // fwd outputs
+    const at::Tensor &radii,                       // [..., C, N, 2]
+    const at::Tensor &conics,                      // [..., C, N, 3]
+    const at::optional<at::Tensor> &compensations, // [..., C, N] optional
+    const at::Tensor ray_planes,                   // [..., C, N, 3]
+    const at::Tensor normals,                      // [..., C, N, 3]
+    // grad outputs
+    const at::Tensor &v_means2d,                     // [..., C, N, 2]
+    const at::Tensor &v_depths,                      // [..., C, N]
+    const at::Tensor &v_conics,                      // [..., C, N, 3]
+    const at::optional<at::Tensor> &v_compensations, // [..., C, N] optional
+    const at::Tensor &v_ray_planes,                  // [..., C, N, 3]
+    const at::Tensor &v_normals,                     // [..., C, N, 3]
+    bool viewmats_requires_grad
+);
+
+std::tuple<
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor,
+    at::Tensor>
+projection_radegs_packed_fwd(
+    const at::Tensor &means,                   // [..., N, 3]
+    const at::optional<at::Tensor> &covars,    // [..., N, 6] optional
+    const at::optional<at::Tensor> &quats,     // [..., N, 4] optional
+    const at::optional<at::Tensor> &scales,    // [..., N, 3] optional
+    const at::optional<at::Tensor> &opacities, // [..., N] optional
+    const at::Tensor &viewmats,                // [..., C, 4, 4]
+    const at::Tensor &Ks,                      // [..., C, 3, 3]
+    int64_t image_width,
+    int64_t image_height,
+    double eps2d,
+    double near_plane,
+    double far_plane,
+    double radius_clip,
+    bool calc_compensations,
+    int64_t camera_model
+);
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+projection_radegs_packed_bwd(
+    // fwd inputs
+    const at::Tensor &means,                // [..., N, 3]
+    const at::optional<at::Tensor> &covars, // [..., N, 6]
+    const at::optional<at::Tensor> &quats,  // [..., N, 4]
+    const at::optional<at::Tensor> &scales, // [..., N, 3]
+    const at::Tensor &viewmats,             // [..., C, 4, 4]
+    const at::Tensor &Ks,                   // [..., C, 3, 3]
+    int64_t image_width,
+    int64_t image_height,
+    double eps2d,
+    int64_t camera_model,
+    // fwd outputs
+    const at::Tensor &batch_ids,                   // [nnz]
+    const at::Tensor &camera_ids,                  // [nnz]
+    const at::Tensor &gaussian_ids,                // [nnz]
+    const at::Tensor &conics,                      // [nnz, 3]
+    const at::optional<at::Tensor> &compensations, // [nnz] optional
+    const at::Tensor &ray_planes,                  // [nnz, 3]
+    const at::Tensor &normals,                     // [nnz, 3]
+    // grad outputs
+    const at::Tensor &v_means2d,                     // [nnz, 2]
+    const at::Tensor &v_depths,                      // [nnz]
+    const at::Tensor &v_conics,                      // [nnz, 3]
+    const at::optional<at::Tensor> &v_compensations, // [nnz] optional
+    const at::Tensor &v_ray_planes,                  // [nnz, 3]
+    const at::Tensor &v_normals,                     // [nnz, 3]
+    bool viewmats_requires_grad,
+    bool sparse_grad
+);
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+rasterize_to_pixels_radegs_fwd(
+    // Gaussian parameters
+    const at::Tensor &means2d,    // [..., N, 2] or [nnz, 2]
+    const at::Tensor &conics,     // [..., N, 3] or [nnz, 3]
+    const at::Tensor &colors,     // [..., N, channels] or [nnz, channels]
+    const at::Tensor &opacities,  // [..., N]  or [nnz]
+    const at::Tensor &ray_planes, // [..., N, 3] or [nnz, 3]
+    const at::Tensor &normals,    // [..., N, 3] or [nnz, 3]
+    const at::optional<at::Tensor> &backgrounds, // [..., channels]
+    const at::optional<at::Tensor> &masks, // [..., tile_height, tile_width]
+    // image size
+    int64_t image_width,
+    int64_t image_height,
+    int64_t tile_size,
+    // intersections
+    const at::Tensor &tile_offsets, // [..., tile_height, tile_width]
+    const at::Tensor &flatten_ids   // [n_isects]
+);
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+rasterize_to_pixels_radegs_bwd(
+    // Gaussian parameters
+    const at::Tensor &means2d,    // [..., N, 2] or [nnz, 2]
+    const at::Tensor &conics,     // [..., N, 3] or [nnz, 3]
+    const at::Tensor &colors,     // [..., N, channels] or [nnz, channels]
+    const at::Tensor &opacities,  // [..., N] or [nnz]
+    const at::Tensor &ray_planes, // [..., N, 3] or [nnz, 3]
+    const at::Tensor &normals,    // [..., N, 3] or [nnz, 3]
+    const at::optional<at::Tensor> &backgrounds, // [..., channels]
+    const at::optional<at::Tensor> &masks, // [..., tile_height, tile_width]
+    // image size
+    int64_t image_width,
+    int64_t image_height,
+    int64_t tile_size,
+    // intersections
+    const at::Tensor &tile_offsets, // [..., tile_height, tile_width]
+    const at::Tensor &flatten_ids,  // [n_isects]
+    // forward outputs
+    const at::Tensor &render_alphas, // [..., image_height, image_width, 1]
+    const at::Tensor &median_ids,    // [..., image_height, image_width]
+    const at::Tensor &last_ids,      // [..., image_height, image_width]
+    // gradients of outputs
+    const at::Tensor
+        &v_render_colors, // [..., image_height, image_width, channels]
+    const at::Tensor &v_render_alphas, // [..., image_height, image_width, 1]
+    const at::Tensor &v_geometries,    // [..., image_height, image_width, 1]
+    // options
+    bool absgrad
+);
+
 // Projection for 2DGS
 std::tuple<
     at::Tensor,

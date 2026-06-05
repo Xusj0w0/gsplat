@@ -210,8 +210,8 @@ int main(int argc, char **argv) {
 
         std::cout << "Running projection for " << n_gaussians << " gaussians"
                   << std::endl;
-        auto [radii, means2d, depths, conics, compensations] =
-            gsplat::projection_ewa_3dgs_fused_fwd(
+        auto [radii, means2d, depths, conics, compensations, ray_planes, normals] =
+            gsplat::projection_radegs_fused_fwd(
                 means,
                 covars,
                 quats,
@@ -264,12 +264,14 @@ int main(int argc, char **argv) {
 
         std::cout << "Rasterizing " << isect_ids.numel() << " intersections"
                   << std::endl;
-        auto [render_colors, render_alphas, last_ids] =
-            gsplat::rasterize_to_pixels_3dgs_fwd(
+        auto [render_colors, render_alphas, geometries, median_ids, last_ids] =
+            gsplat::rasterize_to_pixels_radegs_fwd(
                 means2d,
                 conics,
                 colors.unsqueeze(0),
                 opacities.unsqueeze(0),
+                ray_planes,
+                normals,
                 background,
                 c10::nullopt,
                 s.image_width,

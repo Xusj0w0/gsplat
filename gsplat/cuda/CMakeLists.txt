@@ -14,7 +14,8 @@ set(GSPLAT_NUM_CHANNELS "" CACHE STRING "Optional GSPLAT_NUM_CHANNELS override, 
 set(TORCH_CUDA_ARCH_LIST "7.0;7.5;8.6" CACHE STRING "CUDA architectures passed to TorchConfig")
 
 set(GSPLAT_BUILD_2DGS "0" CACHE STRING "Optional override: 0 or 1")
-set(GSPLAT_BUILD_3DGS "1" CACHE STRING "Optional override: 0 or 1")
+set(GSPLAT_BUILD_3DGS "0" CACHE STRING "Optional override: 0 or 1")
+set(GSPLAT_BUILD_RADEGS "0" CACHE STRING "Optional override: 0 or 1")
 set(GSPLAT_BUILD_3DGUT "0" CACHE STRING "Optional override: 0 or 1")
 set(GSPLAT_BUILD_ADAM "0" CACHE STRING "Optional override: 0 or 1")
 set(GSPLAT_BUILD_RELOC "0" CACHE STRING "Optional override: 0 or 1")
@@ -42,6 +43,8 @@ set(GSPLAT_SOURCES
     csrc/ProjectionEWA3DGSFused.cu
     csrc/ProjectionEWA3DGSPacked.cu
     csrc/ProjectionEWASimple.cu
+    csrc/ProjectionRaDeGSFused.cu
+    csrc/ProjectionRaDeGSPacked.cu
     csrc/ProjectionUT3DGSFused.cu
     csrc/QuatScaleToCovar.cpp
     csrc/QuatScaleToCovarCUDA.cu
@@ -52,6 +55,8 @@ set(GSPLAT_SOURCES
     csrc/RasterizeToPixels2DGSFwd.cu
     csrc/RasterizeToPixels3DGSBwd.cu
     csrc/RasterizeToPixels3DGSFwd.cu
+    csrc/RasterizeToPixelsRaDeGSBwd.cu
+    csrc/RasterizeToPixelsRaDeGSFwd.cu
     csrc/RasterizeToPixelsFromWorld3DGSBwd.cu
     csrc/RasterizeToPixelsFromWorld3DGSFwd.cu
     csrc/Relocation.cpp
@@ -124,7 +129,7 @@ else()
     message(STATUS "Compiling without OpenMP...")
 endif()
 
-foreach(_feature IN ITEMS 2DGS 3DGS 3DGUT ADAM RELOC LOSSES)
+foreach(_feature IN ITEMS 2DGS 3DGS RADEGS 3DGUT ADAM RELOC LOSSES)
     if(NOT "${GSPLAT_BUILD_${_feature}}" STREQUAL "")
         target_compile_definitions(${RAST_NAME} PUBLIC "GSPLAT_BUILD_${_feature}=${GSPLAT_BUILD_${_feature}}")
     endif()
@@ -137,23 +142,3 @@ endif()
 if(NOT "${GSPLAT_NUM_CHANNELS}" STREQUAL "")
     target_compile_definitions(${RAST_NAME} PUBLIC "GSPLAT_NUM_CHANNELS=${GSPLAT_NUM_CHANNELS}")
 endif()
-
-# if(GSPLAT_BUILD_DEBUG_RUNNER)
-#     add_executable(gsplat_debug_runner tests/run.cu)
-#     set_target_properties(gsplat_debug_runner PROPERTIES
-#         CUDA_ARCHITECTURES "${GSPLAT_CUDA_ARCHITECTURES}"
-#         POSITION_INDEPENDENT_CODE ON
-#     )
-#     target_include_directories(gsplat_debug_runner PRIVATE
-#         ${CMAKE_CURRENT_SOURCE_DIR}
-#         ${CMAKE_CURRENT_SOURCE_DIR}/tests
-#         ${CMAKE_CURRENT_SOURCE_DIR}/tests/utils
-#         ${TORCH_INCLUDE_DIRS}
-#     )
-#     target_compile_options(gsplat_debug_runner PRIVATE
-#         ${TORCH_CXX_FLAGS_LIST}
-#         $<$<COMPILE_LANGUAGE:CXX>:-std=c++20;-g;-O0>
-#         $<$<COMPILE_LANGUAGE:CUDA>:-std=c++20;-g;-O0>
-#     )
-#     target_link_libraries(gsplat_debug_runner PRIVATE gsplat::cuda)
-# endif()

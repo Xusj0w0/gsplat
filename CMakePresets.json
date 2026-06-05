@@ -14,7 +14,9 @@
                 "CMAKE_CUDA_ARCHITECTURES": "89",
                 "Torch_DIR": "/home/xusj/Applications/libtorch/share/cmake/Torch",
                 "CMAKE_PREFIX_PATH": "/home/xusj/Applications/libtorch",
-                "ENABLE_CUDA_DEBUG": "ON"
+                "ENABLE_CUDA_DEBUG": "ON",
+                "GSPLAT_BUILD_3DGS": "1",
+                "GSPLAT_BUILD_RADEGS": "1"
             }
         }
     ],
