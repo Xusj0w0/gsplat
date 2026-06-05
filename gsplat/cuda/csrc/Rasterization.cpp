@@ -312,8 +312,6 @@ std::tuple<at::Tensor, at::Tensor> rasterize_to_indices_3dgs(
     return std::make_tuple(gaussian_ids, pixel_ids);
 }
 
-#if GSPLAT_BUILD_RADEGS
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 rasterize_to_pixels_radegs_fwd(
     // Gaussian parameters
@@ -573,10 +571,6 @@ rasterize_to_pixels_radegs_bwd(
         v_normals
     );
 }
-
-#endif
-
-#if GSPLAT_BUILD_2DGS
 
 ////////////////////////////////////////////////////
 // 2DGS
@@ -1216,7 +1210,5 @@ rasterize_to_pixels_from_world_3dgs_bwd(
         v_means, v_quats, v_scales, v_colors, v_opacities
     );
 }
-
-#endif
 
 } // namespace gsplat

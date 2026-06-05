@@ -16,10 +16,6 @@
  * limitations under the License.
  */
 
-#include "Config.h"
-
-#if GSPLAT_BUILD_RADEGS
-
 #include <ATen/Dispatch.h>
 #include <ATen/core/Tensor.h>
 #include <ATen/cuda/Atomic.cuh>

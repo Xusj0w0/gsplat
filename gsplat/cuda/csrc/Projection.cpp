@@ -547,8 +547,6 @@ projection_ewa_3dgs_packed_bwd(
 }
 
 
-#if GSPLAT_BUILD_RADEGS
-
 std::tuple<
     at::Tensor,
     at::Tensor,
@@ -1040,9 +1038,6 @@ projection_radegs_packed_bwd(
     return std::make_tuple(v_means, v_covars, v_quats, v_scales, v_viewmats);
 }
 
-#endif
-
-#if GSPLAT_BUILD_2DGS
 
 std::tuple<
     at::Tensor,
@@ -1515,7 +1510,5 @@ projection_ut_3dgs_fused(
     );
     return std::make_tuple(radii, means2d, depths, conics, compensations);
 }
-
-#endif
 
 } // namespace gsplat
