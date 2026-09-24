@@ -25,7 +25,8 @@ __global__ void rasterize_to_pixels_fwd_kernel(
     const int32_t *__restrict__ flatten_ids,  // [n_isects]
     S *__restrict__ render_colors, // [C, image_height, image_width, COLOR_DIM]
     S *__restrict__ render_alphas, // [C, image_height, image_width, 1]
-    int32_t *__restrict__ last_ids // [C, image_height, image_width]
+    int32_t *__restrict__ last_ids, // [C, image_height, image_width]
+    int32_t *__restrict__ num_hit_pixels // [C, N] or [nnz], optional
 ) {
     // each thread draws one pixel, but also timeshares caching gaussians in a
     // shared tile
@@ -136,6 +137,9 @@ __global__ void rasterize_to_pixels_fwd_kernel(
             for (uint32_t k = 0; k < COLOR_DIM; ++k) {
                 pix_out[k] += c_ptr[k] * vis;
             }
+            if (num_hit_pixels != nullptr) {
+                atomicAdd(num_hit_pixels + g, 1);
+            }
             cur_idx = batch_start + t;
 
             T = next_T;
@@ -160,7 +164,7 @@ __global__ void rasterize_to_pixels_fwd_kernel(
 }
 
 template <uint32_t CDIM>
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> call_kernel_with_dim(
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor> call_kernel_with_dim(
     // Gaussian parameters
     const torch::Tensor &means2d,   // [C, N, 2] or [nnz, 2]
     const torch::Tensor &conics,    // [C, N, 3] or [nnz, 3]
@@ -171,7 +175,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> call_kernel_with_dim(
     const uint32_t image_width, const uint32_t image_height, const uint32_t tile_size,
     // intersections
     const torch::Tensor &tile_offsets, // [C, tile_height, tile_width]
-    const torch::Tensor &flatten_ids   // [n_isects]
+    const torch::Tensor &flatten_ids,  // [n_isects]
+    bool count_hits
 ) {
     DEVICE_GUARD(means2d);
     CHECK_INPUT(means2d);
@@ -203,6 +208,14 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> call_kernel_with_dim(
                                         means2d.options().dtype(torch::kFloat32));
     torch::Tensor last_ids = torch::empty({C, image_height, image_width},
                                           means2d.options().dtype(torch::kInt32));
+    torch::Tensor num_hit_pixels;
+    if (count_hits) {
+        num_hit_pixels = packed
+            ? torch::zeros({means2d.size(0)}, means2d.options().dtype(torch::kInt32))
+            : torch::zeros({C, N}, means2d.options().dtype(torch::kInt32));
+    } else {
+        num_hit_pixels = torch::empty({0}, means2d.options().dtype(torch::kInt32));
+    }
 
     at::cuda::CUDAStream stream = at::cuda::getCurrentCUDAStream();
     const uint32_t shared_mem =
@@ -228,12 +241,13 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> call_kernel_with_dim(
             image_width, image_height, tile_size, tile_width, tile_height,
             tile_offsets.data_ptr<int32_t>(), flatten_ids.data_ptr<int32_t>(),
             renders.data_ptr<float>(), alphas.data_ptr<float>(),
-            last_ids.data_ptr<int32_t>());
+            last_ids.data_ptr<int32_t>(),
+            count_hits ? num_hit_pixels.data_ptr<int32_t>() : nullptr);
 
-    return std::make_tuple(renders, alphas, last_ids);
+    return std::make_tuple(renders, alphas, last_ids, num_hit_pixels);
 }
 
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> rasterize_to_pixels_fwd_tensor(
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor> rasterize_to_pixels_fwd_tensor(
     // Gaussian parameters
     const torch::Tensor &means2d,   // [C, N, 2] or [nnz, 2]
     const torch::Tensor &conics,    // [C, N, 3] or [nnz, 3]
@@ -244,7 +258,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> rasterize_to_pixels_fwd_
     const uint32_t image_width, const uint32_t image_height, const uint32_t tile_size,
     // intersections
     const torch::Tensor &tile_offsets, // [C, tile_height, tile_width]
-    const torch::Tensor &flatten_ids   // [n_isects]
+    const torch::Tensor &flatten_ids,  // [n_isects]
+    bool count_hits
 ) {
     CHECK_INPUT(colors);
     uint32_t channels = colors.size(-1);
@@ -253,7 +268,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> rasterize_to_pixels_fwd_
     case N:                                                                            \
         return call_kernel_with_dim<N>(means2d, conics, colors, opacities,             \
                                        backgrounds, image_width, image_height,         \
-                                       tile_size, tile_offsets, flatten_ids);
+                                       tile_size, tile_offsets, flatten_ids, count_hits);
 
     // TODO: an optimization can be done by passing the actual number of channels into
     // the kernel functions and avoid necessary global memory writes. This requires

@@ -52,6 +52,7 @@ __global__ void select_kernel(
     int height,
     float tau,
     bool warm,
+    bool compact_proxy_geometry,
     int64_t *parent,
     float *weight,
     float *invk,
@@ -63,10 +64,12 @@ __global__ void select_kernel(
     int b = family / C, c = family % C, T = S + M + C, base = b * T,
         group = M / C, span = S / M;
     int coarse = base + S + M + c;
+    int proxy_base = b * (M + C);
+    int coarse_geom = compact_proxy_geometry ? proxy_base + M + c : coarse;
     if (counts[coarse] == 0)
         return;
     float cr =
-        warm ? 0.f : projected_radius(geom + coarse * 11, v, k, width, height);
+        warm ? 0.f : projected_radius(geom + coarse_geom * 11, v, k, width, height);
     float maxmid = 0.f;
     // Only 4 (or configured) intermediate nodes; enforce monotone effective
     // radii.
@@ -75,7 +78,11 @@ __global__ void select_kernel(
             maxmid = fmaxf(
                 maxmid,
                 projected_radius(
-                    geom + (base + S + j) * 11, v, k, width, height
+                    geom + (compact_proxy_geometry ? proxy_base + j : base + S + j) * 11,
+                    v,
+                    k,
+                    width,
+                    height
                 )
             );
     // A nonzero interval is essential when an optimized child exceeds its
@@ -95,7 +102,8 @@ __global__ void select_kernel(
         int mid = base + S + j, kids = counts[mid];
         if (!kids)
             continue;
-        float mr = projected_radius(geom + mid * 11, v, k, width, height);
+        int mid_geom = compact_proxy_geometry ? proxy_base + j : mid;
+        float mr = projected_radius(geom + mid_geom * 11, v, k, width, height);
         if (mr <= tau) {
             chosen[mid] = 1;
             parent[mid] = warm ? mid : coarse;
@@ -181,6 +189,84 @@ std::vector<torch::Tensor> lod_select(
             height,
             tau,
             warm,
+            false,
+            parent.data_ptr<int64_t>(),
+            weights.data_ptr<float>(),
+            invk.data_ptr<float>(),
+            chosen.data_ptr<int>()
+        );
+    C10_CUDA_KERNEL_LAUNCH_CHECK();
+    return {chosen, parent, weights, invk};
+}
+
+std::vector<torch::Tensor> lod_select_proxy(
+    torch::Tensor geom,
+    torch::Tensor counts,
+    torch::Tensor view,
+    torch::Tensor K,
+    int S,
+    int M,
+    int C,
+    int width,
+    int height,
+    double tau,
+    bool warm
+) {
+    DEVICE_GUARD(geom);
+    CHECK_INPUT(geom);
+    CHECK_INPUT(counts);
+    CHECK_INPUT(view);
+    CHECK_INPUT(K);
+    TORCH_CHECK(
+        geom.scalar_type() == torch::kFloat32 && geom.dim() == 2 &&
+            geom.size(1) == 11,
+        "proxy geometry must be float32 [N,11]"
+    );
+    TORCH_CHECK(
+        counts.scalar_type() == torch::kInt32 && counts.dim() == 1,
+        "counts must be int32 [N]"
+    );
+    TORCH_CHECK(
+        view.scalar_type() == torch::kFloat32 && view.numel() == 16 &&
+            K.scalar_type() == torch::kFloat32 && K.numel() == 9,
+        "invalid camera"
+    );
+    int T = S + M + C;
+    TORCH_CHECK(
+        S > 0 && M > 0 && C > 0 && S % M == 0 && M % C == 0 &&
+            counts.numel() % T == 0 &&
+            geom.size(0) == counts.numel() / T * (M + C),
+        "invalid compact hierarchy sizes"
+    );
+    TORCH_CHECK(
+        width > 0 && height > 0 && tau > 0 && std::isfinite(tau),
+        "invalid projection settings"
+    );
+    auto options = geom.options();
+    auto parent = torch::zeros({counts.numel()}, options.dtype(torch::kInt64));
+    auto weights = torch::ones({counts.numel()}, options);
+    auto invk = torch::ones_like(weights);
+    auto chosen = torch::zeros({counts.numel()}, options.dtype(torch::kInt32));
+    int B = counts.numel() / T;
+    if (B)
+        select_kernel<<<
+            (B * C + 255) / 256,
+            256,
+            0,
+            at::cuda::getCurrentCUDAStream()>>>(
+            geom.data_ptr<float>(),
+            counts.data_ptr<int>(),
+            view.data_ptr<float>(),
+            K.data_ptr<float>(),
+            B,
+            S,
+            M,
+            C,
+            width,
+            height,
+            tau,
+            warm,
+            true,
             parent.data_ptr<int64_t>(),
             weights.data_ptr<float>(),
             invk.data_ptr<float>(),
@@ -362,6 +448,7 @@ torch::Tensor lod_activate(torch::Tensor raw, torch::Tensor proxy) {
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("activate", &lod_activate);
     m.def("select", &lod_select);
+    m.def("select_proxy", &lod_select_proxy);
     m.def("interpolate", &lod_interpolate);
     m.def("interpolate_backward", &lod_interpolate_backward);
     m.def("gather", &lod_gather);
